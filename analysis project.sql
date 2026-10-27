@@ -1,4 +1,4 @@
-- EDA
+- Analysis project
 
 
 SELECT * 
