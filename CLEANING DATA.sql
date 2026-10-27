@@ -2,13 +2,13 @@
 
 -- https://www.kaggle.com/datasets/swaptr/layoffs-2022
 
+USE world_layoffs;
 
 SELECT * 
 FROM world_layoffs.layoffs;
 
-
-
 -- creating a staging table.
+CREATE TABLE world_layoffs.layoffs_staging 
 LIKE world_layoffs.layoffs;
 
 INSERT layoffs_staging 
@@ -60,38 +60,7 @@ FROM (
 WHERE 
 	row_num > 1;
 
--- these are the ones  which need to be deleted where the row number is > 1 or 2or greater essentially
-
-WITH DELETE_CTE AS 
-(
-SELECT *
-FROM (
-	SELECT company, location, industry, total_laid_off,percentage_laid_off,`date`, stage, country, funds_raised_millions,
-		ROW_NUMBER() OVER (
-			PARTITION BY company, location, industry, total_laid_off,percentage_laid_off,`date`, stage, country, funds_raised_millions
-			) AS row_num
-	FROM 
-		world_layoffs.layoffs_staging
-) duplicates
-WHERE 
-	row_num > 1
-)
-DELETE
-FROM DELETE_CTE
-;
-
-
-WITH DELETE_CTE AS (
-	SELECT company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions, 
-    ROW_NUMBER() OVER (PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) AS row_num
-	FROM world_layoffs.layoffs_staging
-)
-DELETE FROM world_layoffs.layoffs_staging
-WHERE (company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions, row_num) IN (
-	SELECT company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions, row_num
-	FROM DELETE_CTE
-) AND row_num > 1;
-
+-- these are the ones which need to be deleted where the row number is > 1 or 2 or greater essentially
 
 ALTER TABLE world_layoffs.layoffs_staging ADD row_num INT;
 
@@ -139,7 +108,7 @@ SELECT `company`,
 	FROM 
 		world_layoffs.layoffs_staging;
 
--- now that we have this we can delete rows were row_num is greater than 2
+-- now that we have this we can delete rows where row_num is 2 or greater
 
 DELETE FROM world_layoffs.layoffs_staging2
 WHERE row_num >= 2;
@@ -172,12 +141,12 @@ FROM world_layoffs.layoffs_staging2
 WHERE company LIKE 'airbnb%';
 
 
---  setting the blanks to nulls 
+-- setting the blanks to nulls 
 UPDATE world_layoffs.layoffs_staging2
 SET industry = NULL
 WHERE industry = '';
 
---  checking those are all null
+-- checking those are all null
 
 SELECT *
 FROM world_layoffs.layoffs_staging2
@@ -187,8 +156,8 @@ ORDER BY industry;
 
 -- now we need to populate those nulls if possible
 
-UPDATE layoffs_staging2 t1
-JOIN layoffs_staging2 t2
+UPDATE world_layoffs.layoffs_staging2 t1
+JOIN world_layoffs.layoffs_staging2 t2
 ON t1.company = t2.company
 SET t1.industry = t2.industry
 WHERE t1.industry IS NULL
@@ -203,12 +172,12 @@ ORDER BY industry;
 
 -- ---------------------------------------------------
 
--- I also noticed the Crypto has multiple different variations. We need to standardize that 
+--  the Crypto has multiple different variations. We need to standardize that 
 SELECT DISTINCT industry
 FROM world_layoffs.layoffs_staging2
 ORDER BY industry;
 
-UPDATE layoffs_staging2
+UPDATE world_layoffs.layoffs_staging2
 SET industry = 'Crypto'
 WHERE industry IN ('Crypto Currency', 'CryptoCurrency');
 
@@ -217,18 +186,17 @@ SELECT DISTINCT industry
 FROM world_layoffs.layoffs_staging2
 ORDER BY industry;
 
--- --------------------------------------------------
 -- we also need to look at 
 
 SELECT *
 FROM world_layoffs.layoffs_staging2;
 
---  we have some "United States" and some "United States." with a period at the end. Let's standardize this.
+-- we have some "United States" and some "United States." with a period at the end. Let's standardize this.
 SELECT DISTINCT country
 FROM world_layoffs.layoffs_staging2
 ORDER BY country;
 
-UPDATE layoffs_staging2
+UPDATE world_layoffs.layoffs_staging2
 SET country = TRIM(TRAILING '.' FROM country);
 
 -- now if we run this again it is fixed
@@ -237,16 +205,16 @@ FROM world_layoffs.layoffs_staging2
 ORDER BY country;
 
 
---fixing the date columns:
+-- fixing the date columns:
 SELECT *
 FROM world_layoffs.layoffs_staging2;
 
 -- we can use str to date to update this field
-UPDATE layoffs_staging2
+UPDATE world_layoffs.layoffs_staging2
 SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
 
---  converting the data type properly
-ALTER TABLE layoffs_staging2
+-- converting the data type properly
+ALTER TABLE world_layoffs.layoffs_staging2
 MODIFY COLUMN `date` DATE;
 
 
@@ -274,7 +242,7 @@ AND percentage_laid_off IS NULL;
 SELECT * 
 FROM world_layoffs.layoffs_staging2;
 
-ALTER TABLE layoffs_staging2
+ALTER TABLE world_layoffs.layoffs_staging2
 DROP COLUMN row_num;
 
 
