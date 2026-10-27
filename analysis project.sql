@@ -15,7 +15,6 @@ WHERE  percentage_laid_off IS NOT NULL;
 SELECT *
 FROM layoffs.layoffs_staging2
 WHERE  percentage_laid_off = 1;
--- these are mostly startups it looks like who all went out of business during this time
 
 -- if we order by funcs_raised_millions we can see how big some of these companies were
 SELECT *
@@ -23,15 +22,12 @@ FROM layoffs.layoffs_staging2
 WHERE  percentage_laid_off = 1
 ORDER BY funds_raised_millions DESC;
 
--- SOMEWHAT TOUGHER AND MOSTLY USING GROUP BY--------------------------------------------------------------------------------------------------
-
 -- Companies with the biggest single Layoff
 
 SELECT company, total_laid_off
 FROM layoffs.layoffs_staging
 ORDER BY 2 DESC
 LIMIT 5;
--- now that's just on a single day
 
 -- Companies with the most Total Layoffs
 SELECT company, SUM(total_laid_off)
@@ -72,12 +68,6 @@ FROM layoffs.layoffs_staging2
 GROUP BY stage
 ORDER BY 2 DESC;
 
-
--- TOUGHER QUERIES------------------------------------------------------------------------------------------------------------------------------------
-
--- Earlier we looked at Companies with the most Layoffs. Now let's look at that per year. It's a little more difficult.
-
-
 WITH Company_Year AS 
 (
   SELECT company, YEAR(date) AS years, SUM(total_laid_off) AS total_laid_off
@@ -95,15 +85,13 @@ AND years IS NOT NULL
 ORDER BY years ASC, total_laid_off DESC;
 
 
-
-
 -- Rolling Total of Layoffs Per Month
 SELECT SUBSTRING(date,1,7) as dates, SUM(total_laid_off) AS total_laid_off
 FROM layoffs_staging2
 GROUP BY dates
 ORDER BY dates ASC;
 
--- now use it in a CTE so we can query off of it
+-- now using it in a CTE 
 WITH DATE_CTE AS 
 (
 SELECT SUBSTRING(date,1,7) as dates, SUM(total_laid_off) AS total_laid_off
